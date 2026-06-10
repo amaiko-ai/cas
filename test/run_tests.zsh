@@ -1,0 +1,100 @@
+#!/usr/bin/env zsh
+# Test harness for cas. Run: zsh test/run_tests.zsh
+
+CAS_ZSH=${0:A:h:h}/cas.zsh
+typeset -i pass=0 fail=0
+
+assert_eq() {  # actual expected
+  [[ $1 == $2 ]] || { print -u2 "  assert_eq: expected '$2', got '$1'"; exit 1 }
+}
+assert_file() {
+  [[ -f $1 && ! -L $1 ]] || { print -u2 "  assert_file: $1 is not a regular file"; exit 1 }
+}
+assert_symlink_to() {
+  [[ -L $1 && $(readlink -- $1) == $2 ]] ||
+    { print -u2 "  assert_symlink_to: $1 -> $(readlink -- $1 2>/dev/null), expected -> $2"; exit 1 }
+}
+assert_not_exists() {
+  [[ ! -e $1 && ! -L $1 ]] || { print -u2 "  assert_not_exists: $1 exists"; exit 1 }
+}
+assert_contains() {  # haystack needle
+  [[ $1 == *$2* ]] || { print -u2 "  assert_contains: '$2' not found in: $1"; exit 1 }
+}
+asserts=$(typeset -f assert_eq assert_file assert_symlink_to assert_not_exists assert_contains)
+
+make_home() {
+  mkdir -p $1/.claude/plugins $1/.claude/debug
+  print '{"model":"opus"}' > $1/.claude/settings.json
+  print '# global memory'  > $1/.claude/CLAUDE.md
+  print '{"display":"hi"}' > $1/.claude/history.jsonl
+  print '{"mcpServers":{"dummy":{"command":"dummy-server"}},"oauthAccount":{"emailAddress":"user@example.com"}}' > $1/.claude.json
+}
+
+run_test() {
+  local name=$1 body=$2 sandbox
+  sandbox=$(mktemp -d)
+  make_home $sandbox
+  if HOME=$sandbox zsh -f -c "$asserts
+source ${(q)CAS_ZSH}
+$body" >/dev/null; then
+    print "PASS  $name"; (( ++pass ))
+  else
+    print "FAIL  $name"; (( ++fail ))
+  fi
+  rm -rf $sandbox
+}
+
+run_test "add creates profile dir" '
+  cas add work || { print -u2 "  cas add work failed"; exit 1 }
+  [[ -d $HOME/.claude-profiles/work ]] || { print -u2 "  profile dir missing"; exit 1 }
+'
+
+run_test "add links non-denylisted entries to canonical" '
+  cas add work
+  for e in settings.json CLAUDE.md plugins history.jsonl; do
+    assert_symlink_to $HOME/.claude-profiles/work/$e $HOME/.claude/$e
+  done
+'
+
+run_test "add skips denylisted entries" '
+  cas add work || { print -u2 "  cas add work failed"; exit 1 }
+  assert_not_exists $HOME/.claude-profiles/work/debug
+'
+
+run_test "add seeds .claude.json with only mcpServers" '
+  cas add work
+  p=$HOME/.claude-profiles/work/.claude.json
+  assert_file $p
+  assert_eq "$(jq -S . $p)" "$(jq -S "{mcpServers}" $HOME/.claude.json)"
+'
+
+run_test "add tells the user how to switch and log in" '
+  out=$(cas add work 2>&1)
+  assert_contains "$out" "cas work"
+  assert_contains "$out" "claude"
+'
+
+run_test "add refuses existing profile and leaves it untouched" '
+  cas add work
+  out=$(cas add work 2>&1); rc=$?
+  assert_eq $rc 1
+  assert_contains "$out" "already exists"
+  assert_symlink_to $HOME/.claude-profiles/work/settings.json $HOME/.claude/settings.json
+  assert_file $HOME/.claude-profiles/work/.claude.json
+'
+
+run_test "add rejects invalid and reserved names" '
+  cas add bad/name 2>/dev/null; assert_eq $? 1
+  cas add default  2>/dev/null; assert_eq $? 1
+  assert_not_exists $HOME/.claude-profiles
+'
+
+run_test "add creates the profiles root when missing" '
+  assert_not_exists $HOME/.claude-profiles
+  cas add work || { print -u2 "  cas add work failed"; exit 1 }
+  [[ -d $HOME/.claude-profiles/work ]] || { print -u2 "  profile dir missing"; exit 1 }
+'
+
+print -- "--"
+print "$pass passed, $fail failed"
+(( fail == 0 ))
