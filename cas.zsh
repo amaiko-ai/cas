@@ -46,7 +46,8 @@ _cas_forked() {
 }
 
 _cas_switch() {
-  local name=$1 dir=$HOME/.claude-profiles/$1
+  local name=$1
+  local dir=$HOME/.claude-profiles/$name
   _cas_valid_name "$name" && [[ -d $dir ]] ||
     { print -u2 "cas: unknown profile '$name'"; return 1 }
 
@@ -72,11 +73,27 @@ _cas_switch() {
   export CLAUDE_CONFIG_DIR=$dir CAS_PROFILE=$name
 }
 
+_cas_status() {
+  local active=${CAS_PROFILE:-${${CLAUDE_CONFIG_DIR-}:t}}
+  : ${active:=default}
+  local json=$HOME/.claude.json
+  [[ $active != default ]] && json=$HOME/.claude-profiles/$active/.claude.json
+  local email=$(jq -r '.oauthAccount.emailAddress // empty' $json 2>/dev/null)
+  local name
+  for name in default $HOME/.claude-profiles/*(N/:t); do
+    if [[ $name == $active ]]; then
+      print -r -- "* $name  ${email:-(not logged in)}"
+    else
+      print -r -- "  $name"
+    fi
+  done
+}
+
 cas() {
   case ${1-} in
     add)     _cas_add "${2-}" ;;
     default) unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default ;;
-    '')      print -u2 "cas: usage: cas <profile>|default|add <name>"; return 1 ;;
+    '')      _cas_status ;;
     *)       _cas_switch "$1" ;;
   esac
 }

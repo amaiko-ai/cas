@@ -166,6 +166,31 @@ run_test "switch warns about forked entries but still succeeds" '
   assert_eq "$CAS_PROFILE" "work"
 '
 
+run_test "bare cas shows default active with canonical email" '
+  out=$(cas) || { print -u2 "  bare cas failed"; exit 1 }
+  assert_contains "$out" "* default"
+  assert_contains "$out" "user@example.com"
+'
+
+run_test "bare cas shows (not logged in) without oauthAccount" '
+  print "{\"mcpServers\":{}}" > $HOME/.claude.json
+  out=$(cas) || { print -u2 "  bare cas failed"; exit 1 }
+  assert_contains "$out" "(not logged in)"
+'
+
+run_test "bare cas lists profiles, marks active, shows its email" '
+  cas add work
+  p=$HOME/.claude-profiles/work/.claude.json
+  tmp=$p.tmp.$$
+  jq ". + {oauthAccount:{emailAddress:\"work@example.com\"}}" $p > $tmp && mv $tmp $p
+  cas work
+  out=$(cas) || { print -u2 "  bare cas failed"; exit 1 }
+  assert_contains "$out" "default"
+  assert_contains "$out" "* work"
+  assert_contains "$out" "work@example.com"
+  [[ $out != *user@example.com* ]] || { print -u2 "  canonical email leaked: $out"; exit 1 }
+'
+
 print -- "--"
 print "$pass passed, $fail failed"
 (( fail == 0 ))
