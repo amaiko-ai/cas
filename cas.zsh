@@ -73,6 +73,22 @@ _cas_switch() {
   export CLAUDE_CONFIG_DIR=$dir CAS_PROFILE=$name
 }
 
+# Replace each forked entry of a profile with a symlink to canonical.
+_cas_heal() {
+  local name=${1:-${CAS_PROFILE-}}
+  [[ -z $name || $name == default ]] &&
+    { print -u2 "cas: heal needs an active profile or an explicit name"; return 1 }
+  local dir=$HOME/.claude-profiles/$name
+  _cas_valid_name "$name" && [[ -d $dir ]] ||
+    { print -u2 "cas: unknown profile '$name'"; return 1 }
+  local e
+  for e in ${(f)"$(_cas_forked $dir)"}; do
+    rm -rf -- $dir/$e
+    ln -s $HOME/.claude/$e $dir/$e || return 1
+    print -r -- "Relinked '$e' to canonical"
+  done
+}
+
 _cas_status() {
   local active=${CAS_PROFILE:-${${CLAUDE_CONFIG_DIR-}:t}}
   : ${active:=default}
@@ -92,6 +108,7 @@ _cas_status() {
 cas() {
   case ${1-} in
     add)     _cas_add "${2-}" ;;
+    heal)    _cas_heal "${2-}" ;;
     default) unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default ;;
     '')      _cas_status ;;
     *)       _cas_switch "$1" ;;

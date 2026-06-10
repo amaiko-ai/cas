@@ -191,6 +191,49 @@ run_test "bare cas lists profiles, marks active, shows its email" '
   [[ $out != *user@example.com* ]] || { print -u2 "  canonical email leaked: $out"; exit 1 }
 '
 
+run_test "heal relinks forked entry, canonical wins" '
+  cas add work
+  cas work 2>/dev/null
+  rm $HOME/.claude-profiles/work/CLAUDE.md
+  print "# forked memory" > $HOME/.claude-profiles/work/CLAUDE.md
+  out=$(cas heal); rc=$?
+  assert_eq $rc 0
+  assert_contains "$out" "CLAUDE.md"
+  assert_symlink_to $HOME/.claude-profiles/work/CLAUDE.md $HOME/.claude/CLAUDE.md
+  assert_eq "$(<$HOME/.claude/CLAUDE.md)" "# global memory"
+'
+
+run_test "heal links new canonical entries" '
+  cas add work
+  mkdir $HOME/.claude/skills
+  cas heal work || { print -u2 "  cas heal work failed"; exit 1 }
+  assert_symlink_to $HOME/.claude-profiles/work/skills $HOME/.claude/skills
+'
+
+run_test "heal never touches denylisted entries" '
+  cas add work
+  p=$HOME/.claude-profiles/work/.claude.json
+  before=$(<$p)
+  cas heal work || { print -u2 "  cas heal work failed"; exit 1 }
+  assert_file $p
+  assert_eq "$(<$p)" "$before"
+'
+
+run_test "heal needs an active profile or an explicit name" '
+  cas add work
+  out=$(cas heal 2>&1); assert_eq $? 1
+  assert_contains "$out" "active profile"
+  cas default
+  out=$(cas heal 2>&1); assert_eq $? 1
+  assert_contains "$out" "active profile"
+  cas heal work || { print -u2 "  explicit name on default failed"; exit 1 }
+'
+
+run_test "heal rejects unknown profile" '
+  out=$(cas heal nosuch 2>&1); assert_eq $? 1
+  assert_contains "$out" "nosuch"
+'
+
 print -- "--"
 print "$pass passed, $fail failed"
 (( fail == 0 ))
