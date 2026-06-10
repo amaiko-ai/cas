@@ -78,10 +78,10 @@ _cas_status() {
   : ${active:=default}
   local json=$HOME/.claude.json
   [[ $active != default ]] && json=$HOME/.claude-profiles/$active/.claude.json
-  local email=$(jq -r '.oauthAccount.emailAddress // empty' $json 2>/dev/null)
+  local email=$(jq -r '.oauthAccount.emailAddress // empty' "$json" 2>/dev/null)
   local name
   for name in default $HOME/.claude-profiles/*(N/:t); do
-    if [[ $name == $active ]]; then
+    if [[ $name == "$active" ]]; then
       print -r -- "* $name  ${email:-(not logged in)}"
     else
       print -r -- "  $name"

@@ -185,7 +185,7 @@ run_test "bare cas lists profiles, marks active, shows its email" '
   jq ". + {oauthAccount:{emailAddress:\"work@example.com\"}}" $p > $tmp && mv $tmp $p
   cas work
   out=$(cas) || { print -u2 "  bare cas failed"; exit 1 }
-  assert_contains "$out" "default"
+  assert_contains "$out" "  default"
   assert_contains "$out" "* work"
   assert_contains "$out" "work@example.com"
   [[ $out != *user@example.com* ]] || { print -u2 "  canonical email leaked: $out"; exit 1 }
