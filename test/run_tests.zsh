@@ -27,6 +27,7 @@ make_home() {
   print '{"model":"opus"}' > $1/.claude/settings.json
   print '# global memory'  > $1/.claude/CLAUDE.md
   print '{"display":"hi"}' > $1/.claude/history.jsonl
+  print '1749500000'       > $1/.claude/.last-cleanup
   print '{"mcpServers":{"dummy":{"command":"dummy-server"}},"oauthAccount":{"emailAddress":"user@example.com"}}' > $1/.claude.json
 }
 
@@ -59,6 +60,7 @@ run_test "add links non-denylisted entries to canonical" '
 run_test "add skips denylisted entries" '
   cas add work || { print -u2 "  cas add work failed"; exit 1 }
   assert_not_exists $HOME/.claude-profiles/work/debug
+  assert_not_exists $HOME/.claude-profiles/work/.last-cleanup
 '
 
 run_test "add seeds .claude.json with only mcpServers" '
@@ -87,6 +89,15 @@ run_test "add rejects invalid and reserved names" '
   cas add bad/name 2>/dev/null; assert_eq $? 1
   cas add default  2>/dev/null; assert_eq $? 1
   assert_not_exists $HOME/.claude-profiles
+'
+
+run_test "add is all-or-nothing on failure" '
+  print "not json" > $HOME/.claude.json
+  cas add work 2>/dev/null; assert_eq $? 1
+  assert_not_exists $HOME/.claude-profiles/work
+  print "{\"mcpServers\":{}}" > $HOME/.claude.json
+  cas add work || { print -u2 "  retry after fixing json failed"; exit 1 }
+  [[ -d $HOME/.claude-profiles/work ]] || { print -u2 "  profile dir missing"; exit 1 }
 '
 
 run_test "add creates the profiles root when missing" '
