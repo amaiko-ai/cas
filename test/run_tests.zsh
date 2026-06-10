@@ -106,6 +106,66 @@ run_test "add creates the profiles root when missing" '
   [[ -d $HOME/.claude-profiles/work ]] || { print -u2 "  profile dir missing"; exit 1 }
 '
 
+run_test "switch exports CLAUDE_CONFIG_DIR and CAS_PROFILE" '
+  cas add work
+  cas work || { print -u2 "  cas work failed"; exit 1 }
+  assert_eq "$CLAUDE_CONFIG_DIR" "$HOME/.claude-profiles/work"
+  assert_eq "$CAS_PROFILE" "work"
+'
+
+run_test "default unsets CLAUDE_CONFIG_DIR" '
+  cas add work
+  cas work
+  cas default || { print -u2 "  cas default failed"; exit 1 }
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+  assert_eq "$CAS_PROFILE" "default"
+'
+
+run_test "switch to unknown profile fails and leaves env unchanged" '
+  out=$(cas nosuch 2>&1); rc=$?
+  cas nosuch 2>/dev/null
+  assert_eq $? 1
+  assert_eq $rc 1
+  assert_contains "$out" "unknown profile"
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+  assert_eq "${CAS_PROFILE-}" ""
+'
+
+run_test "switch syncs mcpServers and preserves other profile keys" '
+  cas add work
+  p=$HOME/.claude-profiles/work/.claude.json
+  print "{\"mcpServers\":{\"new\":{\"command\":\"new-server\"}}}" > $HOME/.claude.json
+  tmp=$p.tmp.$$
+  jq ". + {oauthAccount:{emailAddress:\"work@example.com\"}}" $p > $tmp && mv $tmp $p
+  cas work || { print -u2 "  cas work failed"; exit 1 }
+  assert_eq "$(jq -c .mcpServers $p)" "$(jq -c .mcpServers $HOME/.claude.json)"
+  assert_eq "$(jq -r .oauthAccount.emailAddress $p)" "work@example.com"
+'
+
+run_test "switch aborts before touching env when canonical .claude.json is bad" '
+  cas add work
+  print "not json" > $HOME/.claude.json
+  cas work 2>/dev/null; assert_eq $? 1
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+  assert_eq "${CAS_PROFILE-}" ""
+  rm $HOME/.claude.json
+  out=$(cas work 2>&1); assert_eq $? 1
+  assert_contains "$out" ".claude.json"
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+'
+
+run_test "switch warns about forked entries but still succeeds" '
+  cas add work
+  rm $HOME/.claude-profiles/work/settings.json
+  print "{\"model\":\"sonnet\"}" > $HOME/.claude-profiles/work/settings.json
+  err=$( { cas work; } 2>&1 ); rc=$?
+  assert_eq $rc 0
+  assert_contains "$err" "settings.json"
+  assert_contains "$err" "cas heal"
+  cas work 2>/dev/null || exit 1
+  assert_eq "$CAS_PROFILE" "work"
+'
+
 print -- "--"
 print "$pass passed, $fail failed"
 (( fail == 0 ))
