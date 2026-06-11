@@ -91,6 +91,11 @@ run_test "add rejects invalid and reserved names" '
   assert_not_exists $HOME/.claude-profiles
 '
 
+run_test "add rejects dash-leading name" '
+  cas add -foo 2>/dev/null; assert_eq $? 1
+  assert_not_exists $HOME/.claude-profiles
+'
+
 run_test "add is all-or-nothing on failure" '
   print "not json" > $HOME/.claude.json
   cas add work 2>/dev/null; assert_eq $? 1

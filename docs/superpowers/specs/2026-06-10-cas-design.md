@@ -106,8 +106,8 @@ from `~/.zshrc`. Dependencies: zsh, jq. No frameworks.
 
 ## Error handling
 
-- Every command validates profile names (no slashes, not `default` where
-  disallowed) and existence before acting.
+- Every command validates profile names (alphanumeric first character, then
+  `[A-Za-z0-9_-]`; not `default` where disallowed) and existence before acting.
 - The switcher never writes to `~/.claude` or canonical `~/.claude.json`
   (the mcpServers sync reads canonical, writes profile).
 - jq failures or a missing canonical `.claude.json` abort the switch with a

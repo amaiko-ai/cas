@@ -2,7 +2,7 @@
 # `cas` must stay a shell function: switching mutates the calling shell's env.
 
 _cas_valid_name() {
-  [[ $1 =~ '^[A-Za-z0-9_-]+$' && $1 != (default|add|rm|heal) ]]
+  [[ $1 =~ '^[A-Za-z0-9][A-Za-z0-9_-]*$' && $1 != (default|add|rm|heal) ]]
 }
 
 # Print the non-denylisted top-level entry names of canonical ~/.claude.
@@ -34,7 +34,7 @@ _cas_add() {
   _cas_build_profile $dir ||
     { rm -rf $dir; print -u2 "cas: failed to create profile '$name'"; return 1 }
   print -r -- "Profile '$name' created at $dir"
-  print -r -- "Switch with 'cas $name', then run 'claude' and /login with the new account."
+  print -r -- "Switch with 'cas $name', then run 'claude' and /login with the new account"
 }
 
 # Print link-set entries of a profile that are not symlinks to canonical.
@@ -136,9 +136,9 @@ cas() {
 _cas() {
   local -a profiles=($HOME/.claude-profiles/*(N/:t))
   if (( CURRENT == 2 )); then
-    compadd add rm heal default $profiles
+    compadd -- add rm heal default $profiles
   elif (( CURRENT == 3 )) && [[ $words[2] == (rm|heal) ]]; then
-    compadd $profiles
+    compadd -- $profiles
   fi
 }
 
