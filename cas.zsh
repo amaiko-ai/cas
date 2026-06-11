@@ -28,6 +28,11 @@ _cas_build_profile() {
   jq '{mcpServers}' $HOME/.claude.json > $tmp && mv $tmp $dir/.claude.json
 }
 
+# Persist the selection; fresh shells resume it when cas.zsh is sourced.
+_cas_remember() {
+  mkdir -p $HOME/.claude-profiles && print -r -- $1 > $HOME/.claude-profiles/.current
+}
+
 _cas_add() {
   local name=$1
   _cas_valid_name "$name" || { print -u2 "cas: invalid profile name '$name'"; return 1 }
@@ -73,6 +78,7 @@ _cas_switch() {
   fi
 
   export CLAUDE_CONFIG_DIR=$dir CAS_PROFILE=$name
+  _cas_remember $name
 }
 
 # Replace each forked entry of a profile with a symlink to canonical.
@@ -103,6 +109,8 @@ _cas_rm() {
     { print -u2; print -u2 "cas: aborted; profile '$name' untouched"; return 1 }
   print
   rm -rf -- $dir
+  [[ -r $HOME/.claude-profiles/.current && "$(<$HOME/.claude-profiles/.current)" == $name ]] &&
+    _cas_remember default
   [[ ${CAS_PROFILE-} == $name ]] && { unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default }
   print -r -- "Profile '$name' removed"
   print -r -- "Its Keychain entry ('Claude Code-credentials') was NOT removed; delete it via Keychain Access if desired"
@@ -130,7 +138,7 @@ cas() {
     add)     _cas_add "${2-}" ;;
     heal)    _cas_heal "${2-}" ;;
     rm)      _cas_rm "${2-}" ;;
-    default) unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default ;;
+    default) unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default; _cas_remember default ;;
     '')      _cas_status ;;
     *)       _cas_switch "$1" ;;
   esac
@@ -150,3 +158,12 @@ _cas() {
 if (( $+functions[compdef] && $+_comps )); then
   compdef _cas cas
 fi
+
+# Sticky switch: a fresh shell resumes the last selected profile.
+# An inherited selection (nested shell, manual export) always wins.
+() {
+  [[ -n ${CAS_PROFILE-}${CLAUDE_CONFIG_DIR-} || ! -r $HOME/.claude-profiles/.current ]] && return 0
+  local name=$(<$HOME/.claude-profiles/.current)
+  [[ $name != default && -d $HOME/.claude-profiles/$name ]] && _cas_switch $name
+  return 0
+}

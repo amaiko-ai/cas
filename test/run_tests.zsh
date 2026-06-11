@@ -35,7 +35,7 @@ run_test() {
   local name=$1 body=$2 sandbox
   sandbox=$(mktemp -d)
   make_home $sandbox
-  if HOME=$sandbox zsh -f -c "$asserts
+  if HOME=$sandbox CAS_ZSH=$CAS_ZSH zsh -f -c "$asserts
 source ${(q)CAS_ZSH}
 $body" >/dev/null; then
     print "PASS  $name"; (( ++pass ))
@@ -140,6 +140,38 @@ run_test "switch to unknown profile fails and leaves env unchanged" '
   assert_contains "$out" "unknown profile"
   assert_eq "${CLAUDE_CONFIG_DIR-}" ""
   assert_eq "${CAS_PROFILE-}" ""
+'
+
+run_test "switch is sticky: a fresh shell resumes the profile" '
+  cas add work
+  (cas work) || { print -u2 "  cas work failed"; exit 1 }
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\${CAS_PROFILE-unset}\" \"\${CLAUDE_CONFIG_DIR-}\"")
+  assert_eq "$out" "work $HOME/.claude-profiles/work"
+'
+
+run_test "default clears stickiness for fresh shells" '
+  cas add work
+  (cas work)
+  (cas default) || { print -u2 "  cas default failed"; exit 1 }
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\${CAS_PROFILE-unset}\" \"\${CLAUDE_CONFIG_DIR-none}\"")
+  assert_eq "$out" "unset none"
+'
+
+run_test "sticky does not override an inherited selection" '
+  cas add work
+  (cas work)
+  cas default
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\$CAS_PROFILE\"")
+  assert_eq "$out" "default"
+'
+
+run_test "stale sticky state falls back to default" '
+  cas add work
+  (cas work)
+  rm -rf $HOME/.claude-profiles/work
+  zsh -f -c "source ${(q)CAS_ZSH}" || { print -u2 "  sourcing failed on stale state"; exit 1 }
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\${CAS_PROFILE-unset}\"")
+  assert_eq "$out" "unset"
 '
 
 run_test "switch syncs mcpServers and preserves other profile keys" '
@@ -277,6 +309,14 @@ run_test "rm notes Keychain credentials are not removed" '
   cas add work
   out=$(cas rm work <<< y 2>&1); assert_eq $? 0
   assert_contains "$out" "Keychain"
+'
+
+run_test "rm clears sticky state pointing at the removed profile" '
+  cas add work
+  (cas work)
+  cas rm work <<< y || { print -u2 "  cas rm work failed"; exit 1 }
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\${CAS_PROFILE-unset}\"")
+  assert_eq "$out" "unset"
 '
 
 run_test "rm of active profile resets shell to default" '

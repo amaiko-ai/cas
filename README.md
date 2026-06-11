@@ -37,6 +37,11 @@ source ~/dev/amaiko/cas/cas.zsh
 First-time setup of a profile: `cas add work && cas work && claude`, then `/login`
 with the second account.
 
+Switching is **sticky**: the selection is remembered
+(`~/.claude-profiles/.current`), and new terminals start in the last selected
+profile. `cas default` makes new terminals start on the default account again.
+A shell that already has a selection (e.g. a nested shell) keeps it.
+
 ## Prompt embedding
 
 `$CAS_PROFILE` holds the active profile name. For example:

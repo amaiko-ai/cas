@@ -88,6 +88,11 @@ from `~/.zshrc`. Dependencies: zsh, jq. No frameworks.
   heal check. Fails with a clear message if the profile doesn't exist.
 - `cas default` — unset `CLAUDE_CONFIG_DIR`, set `CAS_PROFILE=default`.
   `default` is therefore a reserved profile name.
+- Stickiness (added 2026-06-11): every switch records the selection in
+  `~/.claude-profiles/.current`; sourcing `cas.zsh` in a fresh shell re-applies
+  it through the normal switch path (sync + heal check). A selection already
+  inherited from the environment wins; stale or `default` state is a no-op.
+  `cas rm` resets the state to `default` if it pointed at the removed profile.
 - `cas add <name>` — scaffold `~/.claude-profiles/<name>` with the symlink set,
   create a minimal `.claude.json` containing only the `mcpServers` key copied
   from canonical (Claude Code fills in the rest on first run), then instruct
