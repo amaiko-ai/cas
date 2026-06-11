@@ -14,7 +14,7 @@ identity.
 ## Install
 
 ```sh
-git clone <repo-url> ~/dev/amaiko/cas
+git clone https://github.com/amaiko-ai/cas.git ~/dev/amaiko/cas
 ```
 
 Add to `~/.zshrc`:
