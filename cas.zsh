@@ -145,6 +145,7 @@ _cas() {
   fi
 }
 
-if (( $+functions[compdef] )); then
+# compdef needs a fully initialized completion system (_comps), not just the function
+if (( $+functions[compdef] && $+_comps )); then
   compdef _cas cas
 fi
