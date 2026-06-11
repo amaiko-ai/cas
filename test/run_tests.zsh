@@ -214,7 +214,8 @@ run_test "heal never touches denylisted entries" '
   cas add work
   p=$HOME/.claude-profiles/work/.claude.json
   before=$(<$p)
-  cas heal work || { print -u2 "  cas heal work failed"; exit 1 }
+  out=$(cas heal work) || { print -u2 "  cas heal work failed"; exit 1 }
+  assert_contains "$out" "already canonical"
   assert_file $p
   assert_eq "$(<$p)" "$before"
 '
@@ -232,6 +233,47 @@ run_test "heal needs an active profile or an explicit name" '
 run_test "heal rejects unknown profile" '
   out=$(cas heal nosuch 2>&1); assert_eq $? 1
   assert_contains "$out" "nosuch"
+'
+
+run_test "rm removes profile, canonical data survives" '
+  cas add work
+  cas rm work <<< y || { print -u2 "  cas rm work failed"; exit 1 }
+  assert_not_exists $HOME/.claude-profiles/work
+  assert_eq "$(<$HOME/.claude/settings.json)" "{\"model\":\"opus\"}"
+  assert_file $HOME/.claude/CLAUDE.md
+'
+
+run_test "rm answering n leaves profile untouched" '
+  cas add work
+  cas rm work <<< n 2>/dev/null; assert_eq $? 1
+  [[ -d $HOME/.claude-profiles/work ]] || { print -u2 "  profile dir gone"; exit 1 }
+  assert_symlink_to $HOME/.claude-profiles/work/settings.json $HOME/.claude/settings.json
+  assert_file $HOME/.claude-profiles/work/.claude.json
+'
+
+run_test "rm refuses default" '
+  out=$(cas rm default <<< y 2>&1); assert_eq $? 1
+  assert_contains "$out" "default"
+'
+
+run_test "rm rejects unknown profile and missing argument" '
+  out=$(cas rm nosuch <<< y 2>&1); assert_eq $? 1
+  assert_contains "$out" "nosuch"
+  cas rm <<< y 2>/dev/null; assert_eq $? 1
+'
+
+run_test "rm notes Keychain credentials are not removed" '
+  cas add work
+  out=$(cas rm work <<< y 2>&1); assert_eq $? 0
+  assert_contains "$out" "Keychain"
+'
+
+run_test "rm of active profile resets shell to default" '
+  cas add work
+  cas work
+  cas rm work <<< y || { print -u2 "  cas rm work failed"; exit 1 }
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+  assert_eq "$CAS_PROFILE" "default"
 '
 
 print -- "--"

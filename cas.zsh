@@ -82,11 +82,28 @@ _cas_heal() {
   _cas_valid_name "$name" && [[ -d $dir ]] ||
     { print -u2 "cas: unknown profile '$name'"; return 1 }
   local e
-  for e in ${(f)"$(_cas_forked $dir)"}; do
+  local -a forked=(${(f)"$(_cas_forked $dir)"})
+  (( $#forked )) || { print -r -- "Profile '$name' already canonical"; return 0 }
+  for e in $forked; do
     rm -rf -- $dir/$e
     ln -s $HOME/.claude/$e $dir/$e || return 1
     print -r -- "Relinked '$e' to canonical"
   done
+}
+
+_cas_rm() {
+  local name=$1
+  [[ $name == default ]] && { print -u2 "cas: cannot remove 'default'"; return 1 }
+  local dir=$HOME/.claude-profiles/$name
+  _cas_valid_name "$name" && [[ -d $dir ]] ||
+    { print -u2 "cas: unknown profile '$name'"; return 1 }
+  if [[ -t 0 ]]; then read -q "?cas: delete profile '$name'? [y/N] "; else read -q -u 0; fi ||
+    { print -u2; print -u2 "cas: aborted; profile '$name' untouched"; return 1 }
+  print
+  rm -rf -- $dir
+  [[ ${CAS_PROFILE-} == $name ]] && { unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default }
+  print -r -- "Profile '$name' removed."
+  print -r -- "Its Keychain entry ('Claude Code-credentials') was NOT removed; delete it via Keychain Access if desired."
 }
 
 _cas_status() {
@@ -109,6 +126,7 @@ cas() {
   case ${1-} in
     add)     _cas_add "${2-}" ;;
     heal)    _cas_heal "${2-}" ;;
+    rm)      _cas_rm "${2-}" ;;
     default) unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default ;;
     '')      _cas_status ;;
     *)       _cas_switch "$1" ;;
