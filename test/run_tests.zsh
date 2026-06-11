@@ -91,6 +91,12 @@ run_test "add rejects invalid and reserved names" '
   assert_not_exists $HOME/.claude-profiles
 '
 
+run_test "add links entries even under nobareglobqual" '
+  setopt nobareglobqual
+  cas add work || { print -u2 "  cas add work failed"; exit 1 }
+  assert_symlink_to $HOME/.claude-profiles/work/settings.json $HOME/.claude/settings.json
+'
+
 run_test "add rejects dash-leading name" '
   cas add -foo 2>/dev/null; assert_eq $? 1
   assert_not_exists $HOME/.claude-profiles

@@ -7,6 +7,7 @@ _cas_valid_name() {
 
 # Print the non-denylisted top-level entry names of canonical ~/.claude.
 _cas_link_set() {
+  emulate -L zsh
   local -a deny=(.claude.json .credentials.json debug .last-update-result.json
                  .last-cleanup stats-cache.json mcp-needs-auth-cache.json)
   local e
@@ -107,6 +108,7 @@ _cas_rm() {
 }
 
 _cas_status() {
+  emulate -L zsh
   local active=${CAS_PROFILE:-${${CLAUDE_CONFIG_DIR-}:t}}
   : ${active:=default}
   local json=$HOME/.claude.json
@@ -134,6 +136,7 @@ cas() {
 }
 
 _cas() {
+  emulate -L zsh
   local -a profiles=($HOME/.claude-profiles/*(N/:t))
   if (( CURRENT == 2 )); then
     compadd -- add rm heal default $profiles
