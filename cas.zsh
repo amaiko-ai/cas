@@ -9,7 +9,8 @@ _cas_valid_name() {
 _cas_link_set() {
   emulate -L zsh
   local -a deny=(.claude.json .credentials.json debug .last-update-result.json
-                 .last-cleanup stats-cache.json mcp-needs-auth-cache.json)
+                 .last-cleanup stats-cache.json mcp-needs-auth-cache.json
+                 policy-limits.json remote-settings.json)
   local e
   for e in $HOME/.claude/*(ND:t); do
     (( $deny[(Ie)$e] )) || print -r -- $e
