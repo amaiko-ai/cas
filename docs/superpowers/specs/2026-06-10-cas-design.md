@@ -51,7 +51,9 @@ activated per-shell by a sticky zsh switcher.
   - Per-profile (real files, never linked): `.claude.json`, and entries on a
     small denylist of genuinely ephemeral/account-bound state: `debug/`,
     `.credentials.json` (if it ever appears), `.last-update-result.json`,
-    `.last-cleanup`, `stats-cache.json`, `mcp-needs-auth-cache.json`.
+    `.last-cleanup`, `stats-cache.json`, `mcp-needs-auth-cache.json`,
+    `policy-limits.json`, `remote-settings.json` (the last two discovered in
+    live verification 2026-06-11: created per-account by Claude Code on login).
   - Keychain credentials are created by Claude Code itself on first `/login`
     inside the profile.
 
@@ -106,8 +108,8 @@ from `~/.zshrc`. Dependencies: zsh, jq. No frameworks.
 
 ## Error handling
 
-- Every command validates profile names (no slashes, not `default` where
-  disallowed) and existence before acting.
+- Every command validates profile names (alphanumeric first character, then
+  `[A-Za-z0-9_-]`; not `default` where disallowed) and existence before acting.
 - The switcher never writes to `~/.claude` or canonical `~/.claude.json`
   (the mcpServers sync reads canonical, writes profile).
 - jq failures or a missing canonical `.claude.json` abort the switch with a
