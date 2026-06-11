@@ -174,6 +174,26 @@ run_test "stale sticky state falls back to default" '
   assert_eq "$out" "unset"
 '
 
+run_test "-t switches this shell but is not sticky" '
+  cas add work
+  (cas -t work) || { print -u2 "  cas -t work failed"; exit 1 }
+  out=$(zsh -f -c "source ${(q)CAS_ZSH}; print -r -- \"\${CAS_PROFILE-unset}\"")
+  assert_eq "$out" "unset"
+  cas -t work
+  assert_eq "$CAS_PROFILE" "work"
+  assert_eq "$CLAUDE_CONFIG_DIR" "$HOME/.claude-profiles/work"
+'
+
+run_test "-t default switches shell but keeps stickiness" '
+  cas add work
+  (cas work)
+  cas -t default || { print -u2 "  cas -t default failed"; exit 1 }
+  assert_eq "$CAS_PROFILE" "default"
+  assert_eq "${CLAUDE_CONFIG_DIR-}" ""
+  out=$(zsh -f -c "unset CAS_PROFILE CLAUDE_CONFIG_DIR; source ${(q)CAS_ZSH}; print -r -- \"\$CAS_PROFILE\"")
+  assert_eq "$out" "work"
+'
+
 run_test "switch syncs mcpServers and preserves other profile keys" '
   cas add work
   p=$HOME/.claude-profiles/work/.claude.json

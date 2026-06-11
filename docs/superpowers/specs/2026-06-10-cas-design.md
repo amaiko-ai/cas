@@ -93,6 +93,7 @@ from `~/.zshrc`. Dependencies: zsh, jq. No frameworks.
   it through the normal switch path (sync + heal check). A selection already
   inherited from the environment wins; stale or `default` state is a no-op.
   `cas rm` resets the state to `default` if it pointed at the removed profile.
+  `cas -t <name>` is a transient switch: current shell only, state untouched.
 - `cas add <name>` — scaffold `~/.claude-profiles/<name>` with the symlink set,
   create a minimal `.claude.json` containing only the `mcpServers` key copied
   from canonical (Claude Code fills in the rest on first run), then instruct

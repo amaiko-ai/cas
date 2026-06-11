@@ -29,7 +29,9 @@ _cas_build_profile() {
 }
 
 # Persist the selection; fresh shells resume it when cas.zsh is sourced.
+# No-op under `cas -t` (transient switch: current shell only).
 _cas_remember() {
+  [[ -n ${_cas_transient-} ]] && return 0
   mkdir -p $HOME/.claude-profiles && print -r -- $1 > $HOME/.claude-profiles/.current
 }
 
@@ -134,6 +136,8 @@ _cas_status() {
 }
 
 cas() {
+  local _cas_transient=  # seen by _cas_remember via dynamic scoping
+  [[ ${1-} == -t ]] && { _cas_transient=1; shift }
   case ${1-} in
     add)     _cas_add "${2-}" ;;
     heal)    _cas_heal "${2-}" ;;
@@ -147,8 +151,10 @@ cas() {
 _cas() {
   emulate -L zsh
   local -a profiles=($HOME/.claude-profiles/*(N/:t))
-  if (( CURRENT == 2 )); then
-    compadd -- add rm heal default $profiles
+  if [[ $words[2] == -t ]]; then
+    (( CURRENT == 3 )) && compadd -- default $profiles
+  elif (( CURRENT == 2 )); then
+    compadd -- -t add rm heal default $profiles
   elif (( CURRENT == 3 )) && [[ $words[2] == (rm|heal) ]]; then
     compadd -- $profiles
   fi

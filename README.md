@@ -30,6 +30,7 @@ source ~/dev/amaiko/cas/cas.zsh
 | `cas`            | Show the active profile (with account email) and list all profiles |
 | `cas <name>`     | Switch this shell to a profile; syncs shared MCP servers and warns about forked entries |
 | `cas default`    | Switch this shell back to the default (canonical) account          |
+| `cas -t <name>`  | Transient switch: this shell only, new terminals are unaffected    |
 | `cas add <name>` | Create a new profile                                               |
 | `cas rm <name>`  | Delete a profile after confirmation                                |
 | `cas heal [name]`| Re-link forked entries of a profile (active one if no name given)  |
@@ -41,6 +42,7 @@ Switching is **sticky**: the selection is remembered
 (`~/.claude-profiles/.current`), and new terminals start in the last selected
 profile. `cas default` makes new terminals start on the default account again.
 A shell that already has a selection (e.g. a nested shell) keeps it.
+`cas -t <name>` (or `cas -t default`) switches only the current shell.
 
 ## Prompt embedding
 

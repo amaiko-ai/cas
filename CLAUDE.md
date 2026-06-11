@@ -46,6 +46,9 @@ Core model:
   **sticky**: the selection is persisted in `~/.claude-profiles/.current` and
   re-applied (via the normal `_cas_switch` path) when `cas.zsh` is sourced in
   a fresh shell; an inherited selection in the environment always wins.
+  `cas -t <name>` switches transiently (current shell only, state untouched);
+  the `-t` flag is a `cas()`-local `_cas_transient` read by `_cas_remember`
+  via dynamic scoping.
 - **Forking**: Claude Code rewrites shared files via temp-file-plus-rename,
   which replaces a symlink with a real file and silently detaches that entry
   from canonical. `_cas_forked` detects this on every switch and warns;
