@@ -81,9 +81,9 @@ _cas_heal() {
   local dir=$HOME/.claude-profiles/$name
   _cas_valid_name "$name" && [[ -d $dir ]] ||
     { print -u2 "cas: unknown profile '$name'"; return 1 }
-  local e
   local -a forked=(${(f)"$(_cas_forked $dir)"})
   (( $#forked )) || { print -r -- "Profile '$name' already canonical"; return 0 }
+  local e
   for e in $forked; do
     rm -rf -- $dir/$e
     ln -s $HOME/.claude/$e $dir/$e || return 1
@@ -102,8 +102,8 @@ _cas_rm() {
   print
   rm -rf -- $dir
   [[ ${CAS_PROFILE-} == $name ]] && { unset CLAUDE_CONFIG_DIR; export CAS_PROFILE=default }
-  print -r -- "Profile '$name' removed."
-  print -r -- "Its Keychain entry ('Claude Code-credentials') was NOT removed; delete it via Keychain Access if desired."
+  print -r -- "Profile '$name' removed"
+  print -r -- "Its Keychain entry ('Claude Code-credentials') was NOT removed; delete it via Keychain Access if desired"
 }
 
 _cas_status() {
@@ -132,3 +132,16 @@ cas() {
     *)       _cas_switch "$1" ;;
   esac
 }
+
+_cas() {
+  local -a profiles=($HOME/.claude-profiles/*(N/:t))
+  if (( CURRENT == 2 )); then
+    compadd add rm heal default $profiles
+  elif (( CURRENT == 3 )) && [[ $words[2] == (rm|heal) ]]; then
+    compadd $profiles
+  fi
+}
+
+if (( $+functions[compdef] )); then
+  compdef _cas cas
+fi
